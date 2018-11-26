@@ -4,6 +4,7 @@ public class Item {
     int code;
     String name;
     int count;
+    boolean isMake;
 
     public int getCode() {
         return code;
@@ -34,7 +35,17 @@ public class Item {
         this.code = code;
         this.name = name;
         this.count = count;
+        this.isMake = false;
     }
+
+    public Item(int code, String name, int count, boolean isMake) {
+
+        this.code = code;
+        this.name = name;
+        this.count = count;
+        this.isMake = isMake;
+    }
+
 
     @Override
     public String toString() {

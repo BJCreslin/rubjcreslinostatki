@@ -20,17 +20,23 @@ public class StartMenu implements ActionMenu {
     String nameOstatkiCentralnyFile = "центральный.xls";   //Файл с осттаками на складе Центральный
     String nameOstatkiBaza8File = "выставкасовп.xls";   //Файл с остатками на выставке
     String outFile = "out.txt";   //файл для вывода результата. Что бы 1С понимала нормально . Формат utf-16 !!!!
+    String makeItemsFile = "makeItem.txt";   //файл для вывода списка позиций, которые надо сделать.
+    // Что бы 1С понимала нормально . Формат utf-16 !!!!
+
     int stolbecWithData;
     int stolbecWithCode;
     int stolbecWithName;
+    int stolbecWithMakeItem;
 
     ArrayList<Item> itemArrayList;
     HashMap<Integer, Integer> centralMap;
     HashMap<Integer, Integer> vystavkaMap;
     HashMap<Item, Integer> numberToShift;
+    HashMap<Item, Integer> makeFileMap;
 
 
     outResult outResult;
+    outResult outMakeItem;
 
 
     @Override
@@ -55,8 +61,10 @@ public class StartMenu implements ActionMenu {
             stolbecWithData = stolbecWithDateDefine(sheetMain); //определяем номер столбца с данными по количеству в ячейке
             stolbecWithCode = stolbecWithCodeDefine(sheetMain); //по коду
             stolbecWithName = stolbecWithNameDefine(sheetMain); //по названию
+            stolbecWithMakeItem = stolbecMakeDefine(sheetMain); //по названию
 
-            itemArrayList = fillNeededOstatki(sheetMain); // заполняем Лист данными
+
+            itemArrayList = fillNeededOstatki(sheetMain); // заполняем Лист данными С нужными остатками
 
             log.fine("количество товара в листе" + itemArrayList.size() + "\n");
 
@@ -65,11 +73,16 @@ public class StartMenu implements ActionMenu {
 
             numberToShift = fillResultMap();  //Заполняем резульитрующую мапу для перемещений
 
+            makeFileMap = fillMakeFileMap();
+
             //записываем результат в файл
             outResult = new outResultFile(pathtoFiles + outFile);
             outResult.action(numberToShift);
 
-
+            if (!makeFileMap.isEmpty()) {
+                outMakeItem = new outResultFile(pathtoFiles + makeItemsFile);
+                outMakeItem.action(makeFileMap);
+            }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -78,6 +91,37 @@ public class StartMenu implements ActionMenu {
 
 
     }
+
+    private HashMap<Item, Integer> fillMakeFileMap() {
+        /**
+         *  @return Возвращает словарь с количеством которое надо сделать.
+         *  Если количество на центральном и на выставке меньше 60% от необходимого
+         */
+        HashMap<Item, Integer> makeFileMap = new HashMap<>();
+
+        for (Item item : itemArrayList) {
+            if (item.isMake) {
+                Integer itemOnVystavka = vystavkaMap.get(item.code);
+                Integer itemOnCentral = centralMap.get(item.code);
+                if (itemOnCentral == null) {
+                    itemOnCentral = 0;
+                }
+                Integer itemNeed = item.count;
+
+                if (0.6*itemNeed > ( (itemOnCentral + itemOnVystavka))) {
+                    int numbr = itemNeed - itemOnCentral - itemOnVystavka;
+                    makeFileMap.put(item, numbr);
+                }
+            }
+        }
+        return makeFileMap;
+    }
+
+    /***
+     *
+     * @param sheetMain
+     * @return ArrayList<Item>   Возвращает список нужных на складе выставкаСовп данных
+     */
 
     private ArrayList<Item> fillNeededOstatki(HSSFSheet sheetMain) {
         ArrayList<Item> itemArrayList = new ArrayList<>();
@@ -105,24 +149,40 @@ public class StartMenu implements ActionMenu {
                 log.warning(i + "нет названия товара");
             }
 
-            int numberNeed = 0;
+            int numberNeed = 0; // нужное количество
             try {
                 numberNeed = (int) hssfRowData.getCell(stolbecWithData).getNumericCellValue();
 
             } catch (NullPointerException npe) {
                 log.warning(i + " нет данных по количеству");
                 propuskaem = true;
-            }
-            catch (IllegalStateException npe){
+            } catch (IllegalStateException npe) {
                 log.warning(i + " не числовые данные в ячейке");
                 propuskaem = true;
             }
             if ((!propuskaem) && (numberNeed > 0)) {
-                itemArrayList.add(new Item(code, name, numberNeed));
+                boolean isMakeItem = false;
+                String stringMarker = "";
+
+                try {
+                    stringMarker = hssfRowData.getCell(stolbecWithMakeItem).getStringCellValue().toLowerCase();
+                    if (stringMarker.equals("make")) {
+                        isMakeItem = true;
+                    }
+                    itemArrayList.add(new Item(code, name, numberNeed, isMakeItem));
+                } catch (Exception NullpointerException) {
+                    itemArrayList.add(new Item(code, name, numberNeed));
+                }
             }
         }
         return itemArrayList;
     }
+
+
+    /****
+     * фУНКЦИЯ ВЫЧИСЛЯЮЩАЯ КОЛИЧЕСТВО ТОВАРА ДЛЯ ПЕРЕМЕЩЕНИЯ
+     * @return HashMap<Item                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Integer>  ЭЛЕМЕНТ, КОЛИЧЕСТВО НЕОБХОДИМОЕ ДЛЯ ПЕРЕМЕЩЕНИЯ
+     */
 
     private HashMap<Item, Integer> fillResultMap() {
         HashMap<Item, Integer> mapForResult = new HashMap<>();
@@ -139,10 +199,7 @@ public class StartMenu implements ActionMenu {
                 if (((1.0 * delta / (double) item.count) > 0.3) &&
                         (centralMap.get(item.code) > 0) &&
                         (delta > 0) && (item.count > 0)
-                        && (((1.0 * delta / (1.0 * vystavkaMap.get(item.code))) > 0.5)))
-
-
-                {
+                        && (((1.0 * delta / (1.0 * vystavkaMap.get(item.code))) > 0.5))) {
 
                     int numberForShift = (centralMap.get(item.code) >= delta) ? delta : centralMap.get(item.code);
                     log.fine(item.toString() + " центр= " + centralMap.get(item.code) +
@@ -157,6 +214,13 @@ public class StartMenu implements ActionMenu {
         }
         return mapForResult;
     }
+
+    /**
+     * Формирует словарь на сонове таблицы xls
+     *
+     * @param sheet
+     * @return HashMap<Integer                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Integer>   Возвращает словарь- код , количество
+     */
 
     private HashMap<Integer, Integer> fillMap(HSSFSheet sheet) {
         HashMap<Integer, Integer> itemHashMap = new HashMap<>();
@@ -218,4 +282,11 @@ public class StartMenu implements ActionMenu {
         //визуально из файла взято
         return 4;
     }
+
+    private int stolbecMakeDefine(HSSFSheet sheetMain) {
+        //визуально из файла взято
+        return 5;
+    }
+
+
 }
