@@ -1,5 +1,6 @@
 package view;
 
+import Command.ConsoleCommand;
 import Objects.Item;
 
 import java.io.*;
@@ -15,12 +16,13 @@ public class outResultFile implements outResult {
     }
 
     @Override
+
     public void action(Map<Item, Integer> mapForOut) {
         try (OutputStreamWriter fileOutTXT = new OutputStreamWriter(new FileOutputStream(pathToFile, false),
                 "UTF-16")) {
             if (mapForOut.size() > 0) {
                 fileOutTXT.write("счет=10\n" +
-                        "Дата=2018-10-23 11:57:51\n" +
+                        "Дата="+ ConsoleCommand.dateOut()+"\n" +
                         "Клиент=8\n");
                 for (Map.Entry<Item, Integer> entry : mapForOut.entrySet()) {
                     fileOutTXT.write("Следтовар\n");

@@ -3,23 +3,23 @@ package Objects;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import sun.rmi.runtime.Log;
+import view.outResult;
+import view.outResultFile;
 
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.logging.Logger;
 
 public class StartMenu implements ActionMenu {
     private Logger log = Logger.getLogger(getClass().getName());
 
     String pathtoFiles = "\\\\Post\\креслин владимир\\перемещение\\";
-    String nameMainFile = "Копия ПЕРЕМЕЩЕНИЯ.xls";
-    String nameOstatkiCentralnyFile = "центральный.xls";
-    String nameOstatkiBaza8File = "выставкасовп.xls";
-    String outFile = "out.txt";
+    String nameMainFile = "Копия ПЕРЕМЕЩЕНИЯ.xls";  // Файл с данными по вместимости ячеек
+    String nameOstatkiCentralnyFile = "центральный.xls";   //Файл с осттаками на складе Центральный
+    String nameOstatkiBaza8File = "выставкасовп.xls";   //Файл с остатками на выставке
+    String outFile = "out.txt";   //файл для вывода результата. Что бы 1С понимала нормально . Формат utf-16 !!!!
     int stolbecWithData;
     int stolbecWithCode;
     int stolbecWithName;
@@ -30,18 +30,18 @@ public class StartMenu implements ActionMenu {
     HashMap<Item, Integer> numberToShift;
 
 
+    outResult outResult;
+
+
     @Override
 
     public void action() {
-        itemArrayList = new ArrayList<>();
 
         // Read XSL file
         try (FileInputStream inputStreamMain = new FileInputStream(new File(pathtoFiles + nameMainFile));
              FileInputStream inputStreamCentralnyFile = new FileInputStream(new File(pathtoFiles + nameOstatkiCentralnyFile));
-             FileInputStream inputstreamBaza8File = new FileInputStream((new File(pathtoFiles + nameOstatkiBaza8File)));
-             //  FileWriter fileOutTXT = new FileWriter(pathtoFiles + outFile, false));
-             OutputStreamWriter fileOutTXT = new OutputStreamWriter(new FileOutputStream(pathtoFiles + outFile, false),
-                     "UTF-16")) {
+             FileInputStream inputstreamBaza8File = new FileInputStream((new File(pathtoFiles + nameOstatkiBaza8File)))) {
+
             // Get the workbook instance for XLS file
             HSSFWorkbook workbookMain = new HSSFWorkbook(inputStreamMain);
             HSSFWorkbook workbookCentral = new HSSFWorkbook(inputStreamCentralnyFile);
@@ -52,102 +52,23 @@ public class StartMenu implements ActionMenu {
             HSSFSheet sheetCentral = workbookCentral.getSheetAt(0);
             HSSFSheet sheetBaza8 = workbookBaza8.getSheetAt(0);
 
-            stolbecWithData = stolbecWithDateDefine(sheetMain);
-            stolbecWithCode = stolbecWithCodeDefine(sheetMain);
-            stolbecWithName = stolbecWithNameDefine(sheetMain);
+            stolbecWithData = stolbecWithDateDefine(sheetMain); //определяем номер столбца с данными по количеству в ячейке
+            stolbecWithCode = stolbecWithCodeDefine(sheetMain); //по коду
+            stolbecWithName = stolbecWithNameDefine(sheetMain); //по названию
 
-            boolean nalichie = true;
-            int i = 1;
-            while (nalichie) {
-                boolean propuskaem = false;
-                HSSFRow hssfRowData = sheetMain.getRow(i++);
-                int code = 0;
-                try {
-                    code = (int) hssfRowData.getCell(stolbecWithCode).getNumericCellValue();
-                } catch (IllegalStateException Illex) {
-                    propuskaem = true;
-                    log.warning(i + " не цифровой код товара или группы");
-                } catch (NullPointerException Ex) {
-                    propuskaem = true;
-                    nalichie = false;
-                }
+            itemArrayList = fillNeededOstatki(sheetMain); // заполняем Лист данными
 
-                String name = "";
-                try {
-                    name = hssfRowData.getCell(stolbecWithName).getStringCellValue();
-                } catch (Exception NullpointerException) {
-                    propuskaem = true;
-                    log.warning(i + "нет названия товара");
-                }
+            log.fine("количество товара в листе" + itemArrayList.size() + "\n");
 
-                int numberNeed = 0;
-                try {
-                    numberNeed = (int) hssfRowData.getCell(stolbecWithData).getNumericCellValue();
+            centralMap = fillMap(sheetCentral); //заполняем мапу данными по остаткам на складе Центральный
+            vystavkaMap = fillMap(sheetBaza8);  //Заполняем мапу данными по остаткам на скалде Выставка
 
-                } catch (NullPointerException npe) {
-                    log.warning(i + " нет данных по количеству");
-                    propuskaem = true;
-                }
-                if ((!propuskaem) && (numberNeed > 0)) {
-                    itemArrayList.add(new Item(code, name, numberNeed));
-                }
-            }
-            log.warning("количество товара в листе" + itemArrayList.size() + "\n");
+            numberToShift = fillResultMap();  //Заполняем резульитрующую мапу для перемещений
 
-            centralMap = fillMap(sheetCentral);
-            log.warning("number of Central " + centralMap.size());
-            vystavkaMap = fillMap(sheetBaza8);
-            log.warning("number of Vystavka " + vystavkaMap.size());
-            numberToShift = new HashMap<>();
+            //записываем результат в файл
+            outResult = new outResultFile(pathtoFiles + outFile);
+            outResult.action(numberToShift);
 
-
-            for (Item item : itemArrayList) {
-
-                try {
-                    int delta = item.count - vystavkaMap.get(item.code);
-                    if (delta > 0) {
-                        log.warning(item.toString() + " центр= " + centralMap.get(item.code) +
-                                " выставка= " + vystavkaMap.get(item.code) + " delta " + delta + "\n");
-                    }
-
-
-                    if (((1.0 * delta / (double) item.count) > 0.3) &&
-                            (centralMap.get(item.code) > 0) &&
-                            (delta > 0) && (item.count > 0)
-                            && (((1.0 * delta / (1.0 * vystavkaMap.get(item.code))) > 0.5)))
-
-
-                    {
-
-                        int numberForShift = (centralMap.get(item.code) >= delta) ? delta : centralMap.get(item.code);
-                        log.warning(item.toString() + " центр= " + centralMap.get(item.code) +
-                                " выставка= " + vystavkaMap.get(item.code) + " delta " + delta + " shift " + numberForShift + "\n");
-                        numberToShift.put(item, numberForShift);
-
-                    }
-                } catch (Exception exc) {
-                    // log.warning(item.toString());
-                }
-
-            }
-
-            if (numberToShift.size() > 0) {
-                fileOutTXT.write("счет=10\n" +
-                        "Дата=2018-10-23 11:57:51\n" +
-                        "Клиент=8\n");
-                for (Map.Entry<Item, Integer> entry : numberToShift.entrySet()) {
-                    fileOutTXT.write("Следтовар\n");
-                    fileOutTXT.write("КОЛИчество=" + entry.getValue() + "\n");
-                    fileOutTXT.write("Кодтовара=" + entry.getKey().code + "\n");
-                    fileOutTXT.write("Цена=308\n");
-                }
-            }
-
-
-//            fileOutTXT.write("1");
-//            fileOutTXT.write("2");
-//            System.out.println("All done");
-            fileOutTXT.flush();
 
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -156,7 +77,85 @@ public class StartMenu implements ActionMenu {
         }
 
 
-        //todo здесь должен быть основной
+    }
+
+    private ArrayList<Item> fillNeededOstatki(HSSFSheet sheetMain) {
+        ArrayList<Item> itemArrayList = new ArrayList<>();
+        boolean nalichie = true;
+        int i = 1;
+        while (nalichie) {
+            boolean propuskaem = false;
+            HSSFRow hssfRowData = sheetMain.getRow(i++);
+            int code = 0;
+            try {
+                code = (int) hssfRowData.getCell(stolbecWithCode).getNumericCellValue();
+            } catch (IllegalStateException Illex) {
+                propuskaem = true;
+                log.warning(i + " не цифровой код товара или группы");
+            } catch (NullPointerException Ex) {
+                propuskaem = true;
+                nalichie = false;
+            }
+
+            String name = "";
+            try {
+                name = hssfRowData.getCell(stolbecWithName).getStringCellValue();
+            } catch (Exception NullpointerException) {
+                propuskaem = true;
+                log.warning(i + "нет названия товара");
+            }
+
+            int numberNeed = 0;
+            try {
+                numberNeed = (int) hssfRowData.getCell(stolbecWithData).getNumericCellValue();
+
+            } catch (NullPointerException npe) {
+                log.warning(i + " нет данных по количеству");
+                propuskaem = true;
+            }
+            catch (IllegalStateException npe){
+                log.warning(i + " не числовые данные в ячейке");
+                propuskaem = true;
+            }
+            if ((!propuskaem) && (numberNeed > 0)) {
+                itemArrayList.add(new Item(code, name, numberNeed));
+            }
+        }
+        return itemArrayList;
+    }
+
+    private HashMap<Item, Integer> fillResultMap() {
+        HashMap<Item, Integer> mapForResult = new HashMap<>();
+        for (Item item : itemArrayList) {
+
+            try {
+                int delta = item.count - vystavkaMap.get(item.code);
+                if (delta > 0) {
+                    log.fine(item.toString() + " центр= " + centralMap.get(item.code) +
+                            " выставка= " + vystavkaMap.get(item.code) + " delta " + delta + "\n");
+                }
+
+
+                if (((1.0 * delta / (double) item.count) > 0.3) &&
+                        (centralMap.get(item.code) > 0) &&
+                        (delta > 0) && (item.count > 0)
+                        && (((1.0 * delta / (1.0 * vystavkaMap.get(item.code))) > 0.5)))
+
+
+                {
+
+                    int numberForShift = (centralMap.get(item.code) >= delta) ? delta : centralMap.get(item.code);
+                    log.fine(item.toString() + " центр= " + centralMap.get(item.code) +
+                            " выставка= " + vystavkaMap.get(item.code) + " delta " + delta + " shift " + numberForShift + "\n");
+                    mapForResult.put(item, numberForShift);
+
+                }
+            } catch (Exception exc) {
+                // log.warning(item.toString());
+            }
+
+        }
+        return mapForResult;
     }
 
     private HashMap<Integer, Integer> fillMap(HSSFSheet sheet) {
@@ -185,12 +184,6 @@ public class StartMenu implements ActionMenu {
             int number = 0;
             try {
                 number = (int) sheet.getRow(iPos + shiftV).getCell(stolbecNumber).getNumericCellValue();
-                if (code == 6119) {
-                    log.warning("6119==== " + number);
-                }
-                if (code == 6039) {
-                    log.warning("6039==== " + number);
-                }
             } catch (NullPointerException npe) {
                 propuskaem = true;
                 flagToStop = true;
@@ -223,6 +216,6 @@ public class StartMenu implements ActionMenu {
 
     private int stolbecWithDateDefine(HSSFSheet sheetMain) {
         //визуально из файла взято
-        return 13;
+        return 4;
     }
 }
