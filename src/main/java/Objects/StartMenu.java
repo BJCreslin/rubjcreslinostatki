@@ -28,6 +28,10 @@ public class StartMenu implements ActionMenu {
     int stolbecWithName;
     int stolbecWithMakeItem;
 
+    double percentToMake =0.7;
+    double percentToMovement =0.3;
+
+
     ArrayList<Item> itemArrayList;
     HashMap<Integer, Integer> centralMap;
     HashMap<Integer, Integer> vystavkaMap;
@@ -95,7 +99,7 @@ public class StartMenu implements ActionMenu {
     private HashMap<Item, Integer> fillMakeFileMap() {
         /**
          *  @return Возвращает словарь с количеством которое надо сделать.
-         *  Если количество на центральном и на выставке меньше 60% от необходимого
+         *  Если количество на центральном и на выставке меньше percentToMake (в долях) от необходимого
          */
         HashMap<Item, Integer> makeFileMap = new HashMap<>();
 
@@ -108,7 +112,7 @@ public class StartMenu implements ActionMenu {
                 }
                 Integer itemNeed = item.count;
 
-                if (0.6*itemNeed > ( (itemOnCentral + itemOnVystavka))) {
+                if (percentToMake*itemNeed > ( (itemOnCentral + itemOnVystavka))) {
                     int numbr = itemNeed - itemOnCentral - itemOnVystavka;
                     makeFileMap.put(item, numbr);
                 }
@@ -180,7 +184,7 @@ public class StartMenu implements ActionMenu {
 
 
     /****
-     * фУНКЦИЯ ВЫЧИСЛЯЮЩАЯ КОЛИЧЕСТВО ТОВАРА ДЛЯ ПЕРЕМЕЩЕНИЯ
+     * фУНКЦИЯ ВЫЧИСЛЯЮЩАЯ КОЛИЧЕСТВО ТОВАРА ДЛЯ ПЕРЕМЕЩЕНИЯ в percentToMovement  (в долях) от нужного
      * @return HashMap<Item                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Integer>  ЭЛЕМЕНТ, КОЛИЧЕСТВО НЕОБХОДИМОЕ ДЛЯ ПЕРЕМЕЩЕНИЯ
      */
 
@@ -199,7 +203,7 @@ public class StartMenu implements ActionMenu {
                 if (((1.0 * delta / (double) item.count) > 0.3) &&
                         (centralMap.get(item.code) > 0) &&
                         (delta > 0) && (item.count > 0)
-                        && (((1.0 * delta / (1.0 * vystavkaMap.get(item.code))) > 0.5))) {
+                        && (((1.0 * delta / (1.0 * vystavkaMap.get(item.code))) > percentToMovement))) {
 
                     int numberForShift = (centralMap.get(item.code) >= delta) ? delta : centralMap.get(item.code);
                     log.fine(item.toString() + " центр= " + centralMap.get(item.code) +

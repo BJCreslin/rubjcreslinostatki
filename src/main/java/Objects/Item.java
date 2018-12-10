@@ -22,6 +22,14 @@ public class Item {
         this.name = name;
     }
 
+    public boolean isMake() {
+        return isMake;
+    }
+
+    public void setMake(boolean make) {
+        isMake = make;
+    }
+
     public int getCount() {
         return count;
     }
