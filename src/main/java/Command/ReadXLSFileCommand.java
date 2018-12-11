@@ -19,7 +19,8 @@ public class ReadXLSFileCommand {
     private ArrayList<Item> itemArrayList;
     private HashMap<Integer, Integer> centralMap;
     private HashMap<Integer, Integer> vystavkaMap;
-    double percentToMake;
+    double percentToMake=0.6;
+    double percentToMovement=0.7;
 
 
     public ReadXLSFileCommand(double percentToMake, TransfertMap transfertMap, FileWithOstatkiCentralSklad fileWithOstatkiCentralSklad,
@@ -88,21 +89,7 @@ public class ReadXLSFileCommand {
          */
         HashMap<Item, Integer> makeFileMap = new HashMap<>();
 
-        for (Item item : itemArrayList) {
-            if (item.isMake()) {
-                Integer itemOnVystavka = vystavkaMap.get(item.getCode());
-                Integer itemOnCentral = centralMap.get(item.getCode());
-                if (itemOnCentral == null) {
-                    itemOnCentral = 0;
-                }
-                Integer itemNeed = item.getCount();
-
-                if (percentToMake * itemNeed > ((itemOnCentral + itemOnVystavka))) {
-                    int numbr = itemNeed - itemOnCentral - itemOnVystavka;
-                    makeFileMap.put(item, numbr);
-                }
-            }
-        }
+        StartMenu.dublicatecode(makeFileMap, itemArrayList, vystavkaMap, centralMap, percentToMake);
         return makeFileMap;
     }
 
@@ -177,13 +164,11 @@ public class ReadXLSFileCommand {
                 int delta = item.getCount() - vystavkaMap.get(item.getCode());
 
                 if (((1.0 * delta / (double) item.getCount()) > 0.3) &&
-                        (centralMap.get(item.code) > 0) &&
-                        (delta > 0) && (item.count > 0)
-                        && (((1.0 * delta / (1.0 * vystavkaMap.get(item.code))) > percentToMovement))) {
+                        (centralMap.get(item.getCode()) > 0) &&
+                        (delta > 0) && (item.getCount() > 0)
+                        && (((1.0 * delta / (1.0 * vystavkaMap.get(item.getCode()))) > percentToMovement))) {
 
-                    int numberForShift = (centralMap.get(item.code) >= delta) ? delta : centralMap.get(item.code);
-                    log.fine(item.toString() + " центр= " + centralMap.get(item.code) +
-                            " выставка= " + vystavkaMap.get(item.code) + " delta " + delta + " shift " + numberForShift + "\n");
+                    int numberForShift = (centralMap.get(item.getCode()) >= delta) ? delta : centralMap.get(item.getCode());
                     mapForResult.put(item, numberForShift);
 
                 }
@@ -219,7 +204,6 @@ public class ReadXLSFileCommand {
             } catch (IllegalStateException Illex) {
                 propuskaem = true;
                 flagToStop = true;
-                log.warning("пропустили код");
             } catch (NullPointerException npe) {
                 propuskaem = true;
                 flagToStop = true;
@@ -271,4 +255,4 @@ public class ReadXLSFileCommand {
 
 }
 
-}
+

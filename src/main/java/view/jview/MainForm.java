@@ -151,4 +151,16 @@ public class MainForm extends JFrame {
 
 
     }
+
+    public void setData(dataForTransferBean data) {
+    }
+
+    public void getData(dataForTransferBean data) {
+    }
+
+    public boolean isModified(dataForTransferBean data) {
+        return false;
+    }
+
+
 }
